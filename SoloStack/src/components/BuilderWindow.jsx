@@ -20,7 +20,7 @@ const STEP_META = {
     },
     DESIGN: {
         pillar: 'Design',
-        label: 'Experience',
+        label: 'Design',
         icon: '🎨',
         question: 'How will it feel to use?',
         hint: 'Crafting the soul of your software. (3 Slots)',
@@ -28,7 +28,7 @@ const STEP_META = {
     },
     DEVELOPMENT: {
         pillar: 'Development',
-        label: 'Engineering',
+        label: 'Development',
         icon: '🛠️',
         question: 'How solid is the foundation?',
         hint: 'Balance reliability with innovation. (3 Slots)',
@@ -36,7 +36,7 @@ const STEP_META = {
     },
     MARKETING: {
         pillar: 'Marketing',
-        label: 'Vision',
+        label: 'Marketing',
         icon: '📣',
         question: 'Who needs to see this?',
         hint: 'Sharing your work with the world. (2 Slots)',
@@ -59,7 +59,7 @@ function formatMoney(n) {
 }
 
 // ── Component Selectable Card ──────────────────────────────────────────────────
-function ComponentCard({ comp, isSelected, isUnlocked, isExclusiveMatch, capacityFull, onClick, accentVar }) {
+function ComponentCard({ comp, isSelected, isUnlocked, isAffordable, isExclusiveMatch, capacityFull, onClick, onUnlock, accentVar }) {
     const accent = `var(${accentVar})`;
     const isGated = !isExclusiveMatch && comp.exclusiveTo;
     const disabled = !isUnlocked || isGated;
@@ -87,13 +87,25 @@ function ComponentCard({ comp, isSelected, isUnlocked, isExclusiveMatch, capacit
             }}
         >
             {!isUnlocked && (
-                <div style={{
-                    position: 'absolute', top: 4, right: 6,
-                    fontSize: 10, fontWeight: 700, color: 'var(--text-muted)',
-                    display: 'flex', alignItems: 'center', gap: 3
-                }}>
-                    🔒 {formatMoney(comp.unlockThreshold)}
-                </div>
+                <button
+                    onClick={(e) => {
+                        e.stopPropagation();
+                        if (isAffordable) onUnlock(comp.id);
+                    }}
+                    disabled={!isAffordable || isGated}
+                    style={{
+                        position: 'absolute', top: 4, right: 6,
+                        fontSize: 10, fontWeight: 700,
+                        color: isAffordable && !isGated ? 'var(--bg-base)' : 'var(--text-muted)',
+                        background: isAffordable && !isGated ? 'var(--accent-green)' : 'var(--bg-glass)',
+                        border: 'none', padding: '4px 8px', borderRadius: 4,
+                        display: 'flex', alignItems: 'center', gap: 4,
+                        cursor: isAffordable && !isGated ? 'pointer' : 'not-allowed',
+                        zIndex: 10,
+                        transition: 'all 0.15s ease'
+                    }}>
+                    🔓 {isGated ? 'Locked' : `Unlock for ${formatMoney(comp.unlockThreshold)}`}
+                </button>
             )}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 {/* Checkbox indicator */}
@@ -219,7 +231,7 @@ export default function BuilderWindow() {
     const products = useGameStore(s => s.products);
     const trend = useGameStore(s => s.trend.data);
     const pillarSlots = useGameStore(s => s.pillarSlots);
-    const lifetimeRevenue = useGameStore(s => s.lifetimeRevenue);
+    const unlockComponent = useGameStore(s => s.unlockComponent);
     const pendingSlotChoice = useGameStore(s => s.pendingSlotChoice);
     const chooseSlotBonus = useGameStore(s => s.chooseSlotBonus);
 
@@ -286,8 +298,8 @@ export default function BuilderWindow() {
 
     const allSelectedIds = Object.values(selections).flat();
     const selectedComps = getActiveComponents(allSelectedIds);
-    const totalCost = selectedComps.reduce((s, c) => s + c.cost, 0);
-    const totalDevTime = Math.max(1, Math.ceil(selectedComps.reduce((s, c) => s + c.devTime, 0)));
+    const totalCost = selectedComps.reduce((s, c) => s + (c.cost || 0), 0);
+    const totalDevTime = Math.max(1, Math.ceil(selectedComps.reduce((s, c) => s + (c.devTime || 0), 0)));
     const synergies = detectSynergies(allSelectedIds);
     const softType = getSoftwareTypeById(softwareTypeId);
 
@@ -400,7 +412,7 @@ export default function BuilderWindow() {
                             <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>
                                 Software Type
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
                                 {SOFTWARE_TYPES.map(type => {
                                     const canAfford = energyLeft >= type.energyCost;
                                     const isSelected = softwareTypeId === type.id;
@@ -442,11 +454,12 @@ export default function BuilderWindow() {
                     {/* Component list - Constrained height with scroll */}
                     <div style={{
                         flex: 1,
-                        maxHeight: '380px',
+                        maxHeight: '440px', // Slightly taller
                         overflowY: 'auto',
                         paddingRight: '6px',
-                        display: 'flex',
-                        flexDirection: 'column',
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+                        alignContent: 'start',
                         gap: 8,
                         scrollbarWidth: 'thin',
                         scrollbarColor: 'var(--border-strong) transparent'
@@ -456,10 +469,12 @@ export default function BuilderWindow() {
                                 key={comp.id}
                                 comp={comp}
                                 isSelected={selections[pillarKey].includes(comp.id)}
-                                isUnlocked={lifetimeRevenue >= (comp.unlockThreshold || 0)}
+                                isUnlocked={unlockedComponents.includes(comp.id)}
+                                isAffordable={money >= (comp.unlockThreshold || 0)}
                                 isExclusiveMatch={!comp.exclusiveTo || comp.exclusiveTo === softwareTypeId}
                                 capacityFull={currentCapacity + (comp.capacityCost || 1) > maxCapacity}
                                 onClick={(id) => toggleComponent(pillarKey, id)}
+                                onUnlock={(id) => unlockComponent(id)}
                                 accentVar={meta.accentVar}
                             />
                         ))}
@@ -537,7 +552,7 @@ export default function BuilderWindow() {
                             </div>
                         )}
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 6 }}>
                             {[
                                 { label: 'Effort', value: `${totalDevTime} mo`, icon: '📅' },
                                 { label: 'Budget', value: `$${totalCost.toLocaleString()}`, icon: '💸', color: money < totalCost ? 'var(--accent-pink)' : 'var(--accent-green)' },

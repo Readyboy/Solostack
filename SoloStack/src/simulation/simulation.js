@@ -46,12 +46,13 @@ export function aggregateProjectStats(componentIds) {
         { quality: 0, innovation: 0, retention: 0, marketingPower: 0, risk: 0, devTime: 0, cost: 0, revenueMultiplier: 1.0, tags: [] }
     );
 
-    // Apply synergy bonuses
+    // Apply synergy bonuses defensively
     const activeSynergies = synergies.map(syn => {
+        if (!syn.bonus) return syn;
         Object.keys(syn.bonus).forEach(key => {
             if (base[key] !== undefined) {
-                if (key === 'revenueMultiplier') base[key] *= syn.bonus[key];
-                else base[key] += syn.bonus[key];
+                if (key === 'revenueMultiplier') base[key] *= (syn.bonus[key] || 1.0);
+                else base[key] += (syn.bonus[key] || 0);
             }
         });
         return syn;
@@ -59,6 +60,7 @@ export function aggregateProjectStats(componentIds) {
 
     return { ...base, synergies: activeSynergies };
 }
+
 
 // ── Rating Calculation ─────────────────────────────────────────────────────────
 export function calculateRating(componentIds, softwareTypeId, trend, fanbase) {
@@ -102,9 +104,11 @@ export function calculateRating(componentIds, softwareTypeId, trend, fanbase) {
 export function calcFailureChance(componentIds, softwareTypeId) {
     const stats = aggregateProjectStats(componentIds);
     const softwareType = getSoftwareTypeById(softwareTypeId);
-    const risk = Math.max(0, softwareType.baseRisk + stats.risk);
+    if (!softwareType) return 0.5; // Failsafe
+    const risk = Math.max(0, (softwareType.baseRisk || 0) + (stats.risk || 0));
     return Math.min(0.5, SEVERE_FAIL_CHANCE + risk * 0.8);
 }
+
 
 export function calcViralChance(componentIds, trendAlignment, softwareTypeId) {
     const stats = aggregateProjectStats(componentIds);
@@ -163,21 +167,21 @@ export function generateReviews(project, playerState, trend) {
         trend
     );
 
-    const synergyCriticBoost = stats.synergies.reduce((sum, s) => sum + (s.bonus.criticsScore || 0), 0);
-    const synergyPlayerBoost = stats.synergies.reduce((sum, s) => sum + (s.bonus.playerScore || 0), 0);
+    const synergyCriticBoost = stats.synergies.reduce((sum, s) => sum + (s.bonus?.criticsScore || 0), 0);
+    const synergyPlayerBoost = stats.synergies.reduce((sum, s) => sum + (s.bonus?.playerScore || 0), 0);
 
     const rawCritics =
-        stats.quality * 1.0 +
-        stats.innovation * 0.8 +
+        (stats.quality || 0) * 1.0 +
+        (stats.innovation || 0) * 0.8 +
         synergyCriticBoost -
-        Math.max(0, (softwareType?.baseRisk || 0) + stats.risk) * 2.0;
+        Math.max(0, (softwareType?.baseRisk || 0) + (stats.risk || 0)) * 2.0;
 
     const criticsScore = parseFloat(
         Math.max(3.0, Math.min(9.9, 4.0 + rawCritics * 0.6 + (Math.random() - 0.5) * 0.8)).toFixed(1)
     );
 
     const fanbonusScore = Math.min(1.2, 1 + (fanbase / 30000) * 0.4);
-    const marketingBonus = Math.min(1.5, stats.marketingPower * 0.2);
+    const marketingBonus = Math.min(1.5, (stats.marketingPower || 0) * 0.2);
     const trendBonus = (trendAlignment - 1) * 0.5;
 
     const rawPlayer = (criticsScore * fanbonusScore + marketingBonus + trendBonus + synergyPlayerBoost);
@@ -250,20 +254,20 @@ export function resolveRelease(project, playerState, trend) {
     const isViral = Math.random() < viralChance;
 
     const stats = aggregateProjectStats(componentIds);
-    const fanGainMult = stats.synergies.reduce((sum, s) => sum + (s.bonus.fanGain || 0), 1.0);
+    const fanGainMult = stats.synergies.reduce((sum, s) => sum + (s.bonus?.fanGain || 0), 1.0);
     const fanGain = calculateFanGain(finalRating, isViral, trendAlignment, fanGainMult);
 
     const revenueMultiplier = stats.revenueMultiplier || 1.0;
     const baseMonthly = calculateMonthlyRevenue(finalRating, playerState.fanbase + fanGain, playerState.marketShare, trend, softwareTypeId, revenueMultiplier);
 
     const viralMult = isViral ? VIRAL_MULTIPLIER : 1.0;
-    const launchRevenue = Math.round(baseMonthly * viralMult);
+    const launchRevenue = Math.round((baseMonthly || 0) * viralMult);
 
     const softwareType = getSoftwareTypeById(softwareTypeId);
-    const synergyLifespan = stats.synergies.reduce((sum, s) => sum + (s.bonus.lifespan || 0), 0);
-    const maxMonths = softwareType.baseLifespan + synergyLifespan;
+    const synergyLifespan = stats.synergies.reduce((sum, s) => sum + (s.bonus?.lifespan || 0), 0);
+    const maxMonths = (softwareType?.baseLifespan || 12) + synergyLifespan;
 
-    const synergyShareBoost = stats.synergies.reduce((sum, s) => sum + (s.bonus.marketShareGain || 0), 0);
+    const synergyShareBoost = stats.synergies.reduce((sum, s) => sum + (s.bonus?.marketShareGain || 0), 0);
     const shareGain = (finalRating / 10) * PLAYER_SHARE_GAIN + (synergyShareBoost / 100);
 
     const product = {

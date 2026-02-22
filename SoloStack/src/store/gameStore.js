@@ -134,8 +134,8 @@ const useGameStore = create((set, get) => ({
         const state = get();
         const softwareType = getSoftwareTypeById(softwareTypeId);
         const comps = getActiveComponents(componentIds);
-        const totalCost = comps.reduce((s, c) => s + c.cost, 0);
-        const totalDevTime = Math.max(1, Math.ceil(comps.reduce((s, c) => s + c.devTime, 0)));
+        const totalCost = comps.reduce((s, c) => s + (c.cost || 0), 0);
+        const totalDevTime = Math.max(1, Math.ceil(comps.reduce((s, c) => s + (c.devTime || 0), 0)));
 
         if (state.money < totalCost) return { error: 'Not enough money!' };
         const energyAvail = getAvailableEnergy(state.projects, state.products);
@@ -331,6 +331,25 @@ const useGameStore = create((set, get) => ({
         }));
         get().addNotification({ type: 'unlock', message: `✨ Permanent upgrade: +1 Slot for ${pillar}!` });
     },
+
+    unlockComponent: (componentId) => {
+        const state = get();
+        const comp = COMPONENTS.find(c => c.id === componentId);
+        if (!comp || state.unlockedComponents.includes(componentId) || state.money < comp.unlockThreshold) return;
+
+        set(s => ({
+            money: s.money - comp.unlockThreshold,
+            unlockedComponents: [...s.unlockedComponents, componentId]
+        }));
+
+        playSound('cash', state.isMuted);
+
+        get().addNotification({
+            type: 'unlock',
+            message: `🔓 Unlocked new component: ${comp.name}!`
+        });
+    },
+
 
     acknowledgeWin: () => set(s => ({
         winState: null,

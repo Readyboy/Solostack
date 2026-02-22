@@ -27,7 +27,7 @@ const WINDOW_MAP = {
 };
 
 const WINDOW_META = [
-  { key: 'builder', title: '📦 Project Builder', icon: '✨', pos: { x: 60, y: 70 }, width: 460 },
+  { key: 'builder', title: '📦 Project Builder', icon: '✨', pos: { x: 60, y: 70 }, width: 800 },
   { key: 'projects', title: '🛠️ Development', icon: '⚙️', pos: { x: 540, y: 70 }, width: 400 },
   { key: 'products', title: '📦 My Products', icon: '💿', pos: { x: 60, y: 500 }, width: 440 },
   { key: 'market', title: '📊 Market Overview', icon: '📈', pos: { x: 540, y: 380 }, width: 420 },
