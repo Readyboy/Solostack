@@ -26,6 +26,10 @@ export default function TopBar() {
     const monthlyIncome = useGameStore(s => s.monthlyIncome);
     const projects = useGameStore(s => s.projects);
     const products = useGameStore(s => s.products);
+    const studioName = useGameStore(s => s.studioName);
+    const isMuted = useGameStore(s => s.isMuted);
+    const toggleMute = useGameStore(s => s.toggleMute);
+    const resetGame = useGameStore(s => s.resetGame);
 
     // Calculate energy used
     const { BASE_ENERGY_VAL } = { BASE_ENERGY_VAL: 60 };
@@ -45,14 +49,16 @@ export default function TopBar() {
 
     return (
         <div className="top-bar">
-            <span className="top-bar-logo">SoloStack</span>
+            <span className="top-bar-logo" style={{ color: 'var(--accent-purple)', fontWeight: 600, fontSize: 14, letterSpacing: -0.2 }}>
+                ✨ {studioName} <span style={{ opacity: 0.5, fontWeight: 400, marginLeft: 4 }}>Dev Lab</span>
+            </span>
             <div className="top-bar-sep" />
 
             <div className="top-bar-stat">
                 <span className="emoji">💰</span>
-                <span className="value" style={{ color: '#3ecf8e' }}>{formatMoney(money)}</span>
+                <span className="value" style={{ color: 'var(--accent-green)' }}>{formatMoney(money)}</span>
                 {monthlyIncome > 0 && (
-                    <span style={{ fontSize: 10, color: 'var(--accent-green)', opacity: 0.7 }}>
+                    <span style={{ fontSize: 10, color: 'var(--accent-green)', opacity: 0.8, fontWeight: 700 }}>
                         +{formatMoney(monthlyIncome)}/mo
                     </span>
                 )}
@@ -91,6 +97,40 @@ export default function TopBar() {
                     <span style={{ fontSize: 10, opacity: 0.6 }}>·{trendMonthsLeft}mo</span>
                 </div>
             )}
+
+            <button
+                onClick={toggleMute}
+                style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    fontSize: 16, marginLeft: 10, opacity: 0.6,
+                    transition: 'opacity 0.2s ease'
+                }}
+                title={isMuted ? 'Unmute' : 'Mute'}
+                onMouseEnter={e => e.target.style.opacity = 1}
+                onMouseLeave={e => e.target.style.opacity = 0.6}
+            >
+                {isMuted ? '🔇' : '🔊'}
+            </button>
+
+            <button
+                onClick={resetGame}
+                style={{
+                    background: 'var(--bg-glass)', border: '1px solid var(--border)',
+                    cursor: 'pointer', fontSize: 10, fontWeight: 600,
+                    marginLeft: 12, padding: '4px 8px', borderRadius: 4,
+                    color: 'var(--text-muted)', transition: 'all 0.2s ease'
+                }}
+                onMouseEnter={e => {
+                    e.target.style.color = 'var(--accent-pink)';
+                    e.target.style.borderColor = 'var(--accent-pink)';
+                }}
+                onMouseLeave={e => {
+                    e.target.style.color = 'var(--text-muted)';
+                    e.target.style.borderColor = 'var(--border)';
+                }}
+            >
+                RESTART OS
+            </button>
         </div>
     );
 }

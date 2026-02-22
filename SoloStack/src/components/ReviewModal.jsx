@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import useGameStore from '../store/gameStore.js';
 import { SOFTWARE_TYPES } from '../simulation/softwareTypes.js';
+import { playSound } from '../utils/soundManager.js';
 
 // ─── Review Modal ─────────────────────────────────────────────────────────────
 // Opens after a project finishes dev. Shows critic + player scores before publish.
@@ -16,12 +17,13 @@ function ScoreBar({ score, color }) {
                 <div style={{
                     height: '100%', borderRadius: 4,
                     width: `${pct}%`,
-                    background: `linear-gradient(90deg, ${color}99, ${color})`,
+                    backgroundColor: color,
+                    backgroundImage: `linear-gradient(90deg, rgba(255,255,255,0.1), rgba(255,255,255,0.3))`,
                     transition: 'width 0.8s cubic-bezier(0.16, 1, 0.3, 1)',
-                    boxShadow: `0 0 8px ${color}55`,
+                    boxShadow: `0 0 12px ${color === 'var(--accent)' ? 'var(--accent-purple-glow)' : 'rgba(255,255,255,0.1)'}`,
                 }} />
             </div>
-            <span style={{ fontSize: 20, fontWeight: 800, color, minWidth: 38, fontVariantNumeric: 'tabular-nums' }}>
+            <span style={{ fontSize: 24, fontWeight: 600, color, minWidth: 44, textAlign: 'right', fontFamily: 'var(--font-numeric)', fontVariantNumeric: 'tabular-nums' }}>
                 {score.toFixed(1)}
             </span>
         </div>
@@ -32,10 +34,10 @@ function ImpactRow({ label, value, color, icon }) {
     return (
         <div style={{
             display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '7px 10px', background: 'var(--bg-glass)', borderRadius: 'var(--radius-sm)',
+            padding: '8px 12px', background: 'var(--bg-glass)', borderRadius: 'var(--radius-sm)',
         }}>
-            <span style={{ fontSize: 11, color: 'var(--text-secondary)' }}>{icon} {label}</span>
-            <span style={{ fontSize: 12, fontWeight: 700, color: color || 'var(--text-primary)' }}>{value}</span>
+            <span style={{ fontSize: 12, color: 'var(--text-secondary)' }}>{icon} {label}</span>
+            <span style={{ fontSize: 13, fontWeight: 500, color: color || 'var(--text-primary)', fontFamily: 'var(--font-numeric)' }}>{value}</span>
         </div>
     );
 }
@@ -50,6 +52,11 @@ export default function ReviewModal() {
     const pendingReview = useGameStore(s => s.pendingReview);
     const publishProject = useGameStore(s => s.publishProject);
     const openWindow = useGameStore(s => s.openWindow);
+    const isMuted = useGameStore(s => s.isMuted);
+
+    useEffect(() => {
+        playSound('money', isMuted);
+    }, []);
 
     if (!pendingReview || !pendingReview.reviews) return null;
 
@@ -58,6 +65,7 @@ export default function ReviewModal() {
         criticsScore = 0, criticsText = '',
         playerScore = 0, playerText = '',
         finalRating = 0,
+        viralChance = 0,
         viralLabel = 'Unknown', failLabel = 'Unknown',
         revenueEstimateMin = 0, revenueEstimateMax = 0,
         trendLabel = 'Neutral', trendPercent = 0,
@@ -94,15 +102,13 @@ export default function ReviewModal() {
                 animation: 'scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)',
             }}>
                 {/* Header */}
-                <div style={{ textAlign: 'center', marginBottom: 22 }}>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1.2, marginBottom: 6 }}>
-                        📰 Early Reviews Are In
-                    </div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: 'var(--text-primary)' }}>
+                <div style={{ textAlign: 'center', marginBottom: 28 }}>
+                    <div className="section-header" style={{ color: 'var(--accent-warm)', marginBottom: 10, textAlign: 'center' }}>📰 Early Buzz</div>
+                    <div style={{ fontSize: 22, fontWeight: 600, color: 'var(--text-primary)', letterSpacing: -0.2 }}>
                         "{name}"
                     </div>
                     {softType && (
-                        <div style={{ fontSize: 12, color: softType.color, marginTop: 4 }}>
+                        <div style={{ fontSize: 13, color: 'var(--text-secondary)', marginTop: 6, fontWeight: 600 }}>
                             {softType.icon} {softType.name}
                         </div>
                     )}
@@ -110,67 +116,67 @@ export default function ReviewModal() {
 
                 {/* Critics */}
                 <div style={{
-                    padding: '16px', marginBottom: 12,
-                    background: 'rgba(148, 163, 184, 0.06)', borderRadius: 'var(--radius)',
-                    border: '1px solid rgba(148, 163, 184, 0.12)',
+                    padding: '18px', marginBottom: 14,
+                    background: 'var(--bg-glass)', borderRadius: 'var(--radius)',
+                    border: '1px solid var(--border)',
                 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 8 }}>
-                        📰 Critics
+                    <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10 }}>
+                        🖋️ The Critics
                     </div>
                     <ScoreBar score={criticsScore} color="var(--accent-blue)" />
-                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 10, lineHeight: 1.6, fontStyle: 'italic' }}>
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 12, lineHeight: 1.7, fontStyle: 'italic', opacity: 0.9 }}>
                         "{criticsText}"
                     </p>
                 </div>
 
                 {/* Players */}
                 <div style={{
-                    padding: '16px', marginBottom: 16,
-                    background: 'rgba(124, 110, 247, 0.06)', borderRadius: 'var(--radius)',
-                    border: '1px solid rgba(124, 110, 247, 0.15)',
+                    padding: '18px', marginBottom: 20,
+                    background: 'var(--accent-purple-dim)', borderRadius: 'var(--radius)',
+                    border: '1px solid var(--border-accent)',
                 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--accent-purple)', marginBottom: 8 }}>
-                        👥 Players
+                    <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--accent)', marginBottom: 10 }}>
+                        ☕ The Community
                     </div>
-                    <ScoreBar score={playerScore} color="var(--accent-purple)" />
-                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 10, lineHeight: 1.6, fontStyle: 'italic' }}>
+                    <ScoreBar score={playerScore} color="var(--accent)" />
+                    <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 12, lineHeight: 1.7, fontStyle: 'italic', opacity: 0.9 }}>
                         "{playerText}"
                     </p>
                 </div>
 
                 {/* Combined Impact */}
-                <div style={{ marginBottom: 20 }}>
-                    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 10 }}>
-                        Combined Launch Impact
+                <div style={{ marginBottom: 24 }}>
+                    <div style={{ fontSize: 10, fontWeight: 800, letterSpacing: 1.2, textTransform: 'uppercase', color: 'var(--text-muted)', marginBottom: 12 }}>
+                        Final Launch Outlook
                     </div>
 
                     {/* Final rating hero */}
                     <div style={{
                         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                        padding: '12px 14px', borderRadius: 'var(--radius)',
-                        background: `color-mix(in srgb, ${finalColor} 10%, transparent)`,
-                        border: `1px solid color-mix(in srgb, ${finalColor} 30%, transparent)`,
-                        marginBottom: 8,
+                        padding: '14px 18px', borderRadius: 'var(--radius)',
+                        background: `color-mix(in srgb, ${finalColor} 8%, var(--bg-glass))`,
+                        border: `1px solid color-mix(in srgb, ${finalColor} 25%, transparent)`,
+                        marginBottom: 10,
                     }}>
                         <div>
-                            <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>Final Launch Rating</div>
-                            <div style={{ fontSize: 26, fontWeight: 800, color: finalColor, lineHeight: 1.2 }}>
-                                {finalRating.toFixed(1)}<span style={{ fontSize: 14, opacity: 0.6 }}>/10</span>
+                            <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500, letterSpacing: 0.5 }}>VERDICT</div>
+                            <div style={{ fontSize: 32, fontWeight: 600, color: finalColor, lineHeight: 1, letterSpacing: -1, fontFamily: 'var(--font-numeric)' }}>
+                                {finalRating.toFixed(1)}<span style={{ fontSize: 18, opacity: 0.4, fontWeight: 400 }}>/10</span>
                             </div>
                         </div>
-                        <div style={{ fontSize: 40 }}>
+                        <div style={{ fontSize: 44, filter: 'drop-shadow(0 0 8px rgba(0,0,0,0.2))' }}>
                             {finalRating >= 9 ? '🌟' : finalRating >= 8 ? '⭐' : finalRating >= 7 ? '👍' : finalRating >= 6 ? '😐' : '💀'}
                         </div>
                     </div>
 
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <ImpactRow icon="🔥" label="Viral Potential" value={viralLabel}
-                            color={viralLabel === 'Extreme' || viralLabel === 'High' ? 'var(--accent-amber)' : 'var(--text-secondary)'} />
-                        <ImpactRow icon="⚠️" label="Stability" value={failLabel}
+                            color={viralChance > 0.2 ? 'var(--accent-amber)' : 'var(--text-secondary)'} />
+                        <ImpactRow icon="🕯️" label="Software Stability" value={failLabel}
                             color={failLabel === 'High' ? 'var(--accent-pink)' : 'var(--accent-green)'} />
-                        <ImpactRow icon="📈" label="Trend Match" value={`${trendLabel} (${trendPercent > 0 ? '+' : ''}${trendPercent}%)`}
+                        <ImpactRow icon="🌊" label="Trend Alignment" value={`${trendLabel} (${trendPercent > 0 ? '+' : ''}${trendPercent}%)`}
                             color={trendPercent > 10 ? 'var(--accent-green)' : trendPercent > -10 ? 'var(--accent-amber)' : 'var(--accent-pink)'} />
-                        <ImpactRow icon="💰" label="Expected Revenue"
+                        <ImpactRow icon="🎁" label="Est. Monthly Gain"
                             value={`${formatMoney(revenueEstimateMin)} – ${formatMoney(revenueEstimateMax)}`}
                             color="var(--accent-green)" />
                     </div>
@@ -181,15 +187,16 @@ export default function ReviewModal() {
                     className="btn btn-primary w-full"
                     onClick={handlePublish}
                     style={{
-                        fontSize: 14, fontWeight: 700, padding: '12px',
+                        padding: '16px', borderRadius: 'var(--radius)',
+                        fontSize: 16, fontWeight: 600,
                         transition: 'all 0.3s ease',
                     }}
                 >
-                    🚀 Publish Software
+                    ✨ Publish
                 </button>
 
-                <div style={{ textAlign: 'center', marginTop: 10, fontSize: 10, color: 'var(--text-muted)' }}>
-                    Game paused. You must publish to continue.
+                <div style={{ textAlign: 'center', marginTop: 14, fontSize: 11, color: 'var(--text-muted)', fontWeight: 500 }}>
+                    Software is safe in your local repo. <br />Publish to go live! 🚀
                 </div>
             </div>
         </div>

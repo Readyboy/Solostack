@@ -5,7 +5,7 @@ import { create } from 'zustand';
 import { STARTING_MONEY, STARTING_FANS, BASE_ENERGY } from '../simulation/constants.js';
 import { initCorporations } from '../simulation/corporations.js';
 import { TRENDS, getRandomTrend, getTrendDuration } from '../simulation/trends.js';
-import { COMPONENTS, getActiveComponents } from '../simulation/components.js';
+import { COMPONENTS, getActiveComponents, detectSynergies } from '../simulation/components.js';
 import { getSoftwareTypeById, SOFTWARE_TYPES } from '../simulation/softwareTypes.js';
 import {
     resolveRelease,
@@ -15,6 +15,7 @@ import {
     updateMarketShare,
     generateReviews,
 } from '../simulation/simulation.js';
+import { playSound } from '../utils/soundManager.js';
 
 const SAVE_KEY = 'solostack_save_v1.3'; // Bumped version
 
@@ -31,7 +32,7 @@ function createInitialState() {
         totalReleases: 0,
         month: 1,
 
-        isPaused: false,
+        isPaused: true,
 
         // Projects (in development)
         projects: [],
@@ -57,7 +58,7 @@ function createInitialState() {
 
         // Unlocked components (ids)
         unlockedComponents: COMPONENTS
-            .filter(c => c.unlockCondition.type === 'free')
+            .filter(c => c.unlockThreshold === 0)
             .map(c => c.id),
 
         // Window open/close state
@@ -77,10 +78,19 @@ function createInitialState() {
         pillarSlots: { Ideation: 2, Design: 3, Development: 3, Marketing: 2 },
         hasUnlockedSlotBonus: false,
         pendingSlotChoice: false,
-        categoryLegacy: {}, // { categoryId: level }
+        categoryLegacy: {}, // { categoryId: totalPoints }
+        discoveredSynergies: [], // [synergyId]
 
         // Win state
         winState: null,
+        achievedWins: [], // [winType] e.g. 'revenue', 'market', 'domination'
+
+        // V3.1: Setup & Personalization
+        hasCompletedSetup: false,
+        studioName: 'My Studio',
+        desktopBackground: 'default', // 'default', 'sunset', 'night', 'forest' or dataURL
+        osTheme: 'purple', // 'purple', 'amber', 'green', 'peach', 'blue'
+        isMuted: false,
 
         // UI state
         projectIdCounter: 0,
@@ -106,12 +116,15 @@ const useGameStore = create((set, get) => ({
     pauseGame: () => set({ isPaused: true }),
     resumeGame: () => set({ isPaused: false }),
 
-    addNotification: (notification) => set(s => ({
-        notifications: [
-            { id: `notif_${Date.now()}_${Math.random()}`, ...notification },
-            ...s.notifications,
-        ].slice(0, 10),
-    })),
+    addNotification: (notification) => set(s => {
+        playSound('chime', s.isMuted);
+        return {
+            notifications: [
+                { id: `notif_${Date.now()}_${Math.random()}`, ...notification },
+                ...s.notifications,
+            ].slice(0, 10),
+        };
+    }),
     dismissNotification: (id) => set(s => ({
         notifications: s.notifications.filter(n => n.id !== id),
     })),
@@ -130,9 +143,9 @@ const useGameStore = create((set, get) => ({
 
         const id = `proj_${state.projectIdCounter + 1}`;
 
-        // V3: Apply Legacy Bonus
-        const legacyLevel = state.categoryLegacy[softwareTypeId] || 0;
-        const legacyRatingBonus = legacyLevel * 0.1;
+        // V3: Apply Legacy Bonus (Category Mastery)
+        const legacyPoints = state.categoryLegacy[softwareTypeId] || 0;
+        const legacyRatingBonus = Math.min(1.5, legacyPoints * 0.15); // Cap at 1.5 bonus
 
         const project = {
             id,
@@ -186,17 +199,35 @@ const useGameStore = create((set, get) => ({
 
         if (!project) {
             console.error(`❌ Project not found: ${projectId}`);
+            get().addNotification({ type: 'fail', message: `⚠️ Critical Error: Project ${projectId} could not be found for publishing.` });
             return;
         }
 
         const result = resolveRelease(project, state, state.trend.data);
+
+        // V3: Synergy Discovery Tracking
+        const activeSynergies = detectSynergies(project.componentIds);
+        const discoveredSynergies = Array.isArray(state.discoveredSynergies) ? state.discoveredSynergies : [];
+        const newlyDiscovered = activeSynergies.filter(s => !discoveredSynergies.includes(s.id));
+
         get().addNotification({ type: result.isFail ? 'fail' : (result.isViral ? 'viral' : 'release'), message: result.message });
 
+        if (newlyDiscovered.length > 0) {
+            newlyDiscovered.forEach(s => {
+                get().addNotification({
+                    type: 'unlock',
+                    message: `✨ TECHNIQUE DISCOVERED: "${s.label}"! You've mastered a new technical synergy.`,
+                });
+            });
+        }
+
         if (result.isFail) {
+            console.warn(`🚨 Project failed at launch: ${project.name}`);
             set(s => ({
                 pendingReview: null,
                 isPaused: false,
-                projects: s.projects.filter(p => p.id !== projectId),
+                projects: (s.projects || []).filter(p => p.id !== projectId),
+                archive: [...(playerExpired || []), ...(s.archive || [])].slice(0, 200),
             }));
             return;
         }
@@ -226,8 +257,8 @@ const useGameStore = create((set, get) => ({
         set(s => ({
             pendingReview: null,
             isPaused: false,
-            totalReleases: s.totalReleases + 1,
-            projects: s.projects.filter(p => p.id !== projectId),
+            totalReleases: (s.totalReleases || 0) + 1,
+            projects: (s.projects || []).filter(p => p.id !== projectId),
             products: [...(s.products || []), product],
             money: s.money + launchRevenue,
             fanbase: s.fanbase + fanGain,
@@ -236,6 +267,7 @@ const useGameStore = create((set, get) => ({
             windows: { ...s.windows, products: true },
             hasUnlockedSlotBonus: unlockSlot ? true : s.hasUnlockedSlotBonus,
             pendingSlotChoice: unlockSlot ? true : s.pendingSlotChoice,
+            discoveredSynergies: [...new Set([...discoveredSynergies, ...newlyDiscovered.map(s => s.id)])],
         }));
 
         console.assert(!get().isPaused, '❌ Game still paused after publish');
@@ -250,7 +282,11 @@ const useGameStore = create((set, get) => ({
 
         const newState = get();
         const win = checkWinConditions(newState);
-        if (win && !newState.winState) set({ winState: win });
+        const achievedWins = Array.isArray(newState.achievedWins) ? newState.achievedWins : [];
+
+        if (win && !newState.winState && !achievedWins.includes(win.type)) {
+            set({ winState: win });
+        }
     },
 
     archiveProduct: (productId) => {
@@ -258,9 +294,10 @@ const useGameStore = create((set, get) => ({
         const product = state.products.find(p => p.id === productId);
         if (!product) return;
 
-        // V3: Legacy Memory
+        // V3: Legacy Memory (Points = success-dependent)
         const catId = product.softwareTypeId;
-        const currentLegacy = state.categoryLegacy[catId] || 0;
+        const currentPoints = state.categoryLegacy[catId] || 0;
+        const gainedPoints = Math.max(0, (product.rating - 6) * 1.5); // Rating 8 gives 3pts, 10 gives 6pts
 
         set(s => ({
             products: s.products.filter(p => p.id !== productId),
@@ -272,10 +309,16 @@ const useGameStore = create((set, get) => ({
             }],
             categoryLegacy: {
                 ...s.categoryLegacy,
-                [catId]: Math.min(5, currentLegacy + 1), // Max level 5
+                [catId]: currentPoints + gainedPoints,
             }
         }));
-        get().addNotification({ type: 'archive', message: `📦 "${product.name}" archived. Legacy established for ${catId}!` });
+
+        if (gainedPoints > 0) {
+            get().addNotification({
+                type: 'unlock',
+                message: `📂 "${product.name}" archived. Your mastery of ${catId.replace('_', ' ')} has grown! (+${gainedPoints.toFixed(1)} Legacy)`
+            });
+        }
     },
 
     chooseSlotBonus: (pillar) => {
@@ -289,7 +332,48 @@ const useGameStore = create((set, get) => ({
         get().addNotification({ type: 'unlock', message: `✨ Permanent upgrade: +1 Slot for ${pillar}!` });
     },
 
-    acknowledgeWin: () => set({ winState: null, isPaused: false }),
+    acknowledgeWin: () => set(s => ({
+        winState: null,
+        isPaused: false,
+        achievedWins: [...new Set([...(s.achievedWins || []), s.winState?.type].filter(Boolean))]
+    })),
+
+    // ── V3.1: Setup & Personalization Actions ──────────────────────────────────
+    completeSetup: (data) => {
+        set(s => {
+            playSound('boot', s.isMuted);
+            return {
+                ...s,
+                hasCompletedSetup: true,
+                studioName: data.studioName || s.studioName,
+                desktopBackground: data.desktopBackground || s.desktopBackground,
+                osTheme: data.osTheme || s.osTheme,
+                windows: { ...s.windows, builder: true },
+                isPaused: false
+            };
+        });
+        get().saveGame();
+    },
+
+    updatePersonalization: (data) => {
+        set(s => ({
+            ...s,
+            ...data
+        }));
+        get().saveGame();
+    },
+
+    toggleMute: () => set(s => {
+        const next = !s.isMuted;
+        return { isMuted: next };
+    }),
+
+    resetGame: () => {
+        if (confirm('Are you sure you want to reset all progress?')) {
+            localStorage.removeItem(SAVE_KEY);
+            window.location.reload();
+        }
+    },
 
     // ── Monthly Tick ───────────────────────────────────────────────────────────
     advanceTick: () => {
@@ -303,6 +387,7 @@ const useGameStore = create((set, get) => ({
         }
 
         const result = runMonthlyTick(state);
+        playSound('tick', state.isMuted);
         result.notifications?.forEach(n => get().addNotification(n));
 
         // V3: Auto-Archive Player Products only
@@ -327,12 +412,21 @@ const useGameStore = create((set, get) => ({
         set(s => ({
             ...result,
             corporations: updatedCorps,
-            archive: [...(s.archive || []), ...playerExpired],
+            archive: [...(playerExpired || []), ...s.archive].slice(0, 200), // Cap at 200 for performance
             isPaused: s.isPaused,
             pendingReview: s.pendingReview,
             winState: s.winState,
             unlockedComponents: s.unlockedComponents,
         }));
+
+        // V3: Check for win on monthly tick too
+        const newState = get();
+        const win = checkWinConditions(newState);
+        const achievedWins = Array.isArray(newState.achievedWins) ? newState.achievedWins : [];
+
+        if (win && !newState.winState && !achievedWins.includes(win.type)) {
+            set({ winState: win });
+        }
 
         get().saveGame();
     },
@@ -367,7 +461,12 @@ const useGameStore = create((set, get) => ({
                 unlockedComponents: Array.isArray(saved.unlockedComponents) ? saved.unlockedComponents : initial.unlockedComponents,
                 windows: initial.windows, // Always reset layout to avoid ghost windows
                 notifications: [],
-                isPaused: !!saved.pendingReview,
+                isPaused: !saved.hasCompletedSetup || !!saved.pendingReview,
+                // Critical Safety Fallbacks
+                osTheme: saved.osTheme || initial.osTheme,
+                desktopBackground: saved.desktopBackground || initial.desktopBackground,
+                hasCompletedSetup: saved.hasCompletedSetup === undefined ? initial.hasCompletedSetup : saved.hasCompletedSetup,
+                achievedWins: Array.isArray(saved.achievedWins) ? saved.achievedWins : [],
             }));
             return true;
         } catch {

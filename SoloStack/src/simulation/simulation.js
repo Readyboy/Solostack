@@ -170,7 +170,7 @@ export function generateReviews(project, playerState, trend) {
         stats.quality * 1.0 +
         stats.innovation * 0.8 +
         synergyCriticBoost -
-        Math.max(0, softwareType.baseRisk + stats.risk) * 2.0;
+        Math.max(0, (softwareType?.baseRisk || 0) + stats.risk) * 2.0;
 
     const criticsScore = parseFloat(
         Math.max(3.0, Math.min(9.9, 4.0 + rawCritics * 0.6 + (Math.random() - 0.5) * 0.8)).toFixed(1)
@@ -282,6 +282,7 @@ export function resolveRelease(project, playerState, trend) {
         isViral,
         releasedAt: playerState.month,
         isPlayer: true,
+        marketShare: Math.max(0.001, shareGain / 5), // V3: Give individual product share for visibility
     };
 
     return {

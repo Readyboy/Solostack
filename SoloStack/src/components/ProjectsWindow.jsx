@@ -10,8 +10,8 @@ export default function ProjectsWindow() {
     if (projects.length === 0) {
         return (
             <div className="empty-state">
-                <div className="empty-icon">⚙️</div>
-                <p>No projects in development.<br />Open the Builder to start one!</p>
+                <div className="empty-icon">☕</div>
+                <p>No projects in the works.<br />Open the Builder to start something special!</p>
             </div>
         );
     }
@@ -29,25 +29,26 @@ export default function ProjectsWindow() {
                             <div className="flex items-center gap-8">
                                 <span style={{ fontSize: 18 }}>{type?.icon}</span>
                                 <div>
-                                    <div style={{ fontWeight: 700, fontSize: 13 }}>{project.name}</div>
-                                    <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>{type?.name}</div>
+                                    <div style={{ fontWeight: 600, fontSize: 13, color: 'var(--text-primary)' }}>{project.name}</div>
+                                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>{type?.name}</div>
                                 </div>
                             </div>
                             <div style={{ textAlign: 'right' }}>
-                                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-amber)' }}>
-                                    {project.monthsLeft}mo left
+                                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-warm)', fontFamily: 'var(--font-numeric)' }}>
+                                    {project.monthsLeft}mo
                                 </div>
+                                <div style={{ fontSize: 9, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: 0.5 }}>Remaining</div>
                             </div>
                         </div>
 
                         {/* Progress bar */}
-                        <div style={{ marginBottom: 10 }}>
-                            <div className="progress-bar">
+                        <div style={{ marginBottom: 12 }}>
+                            <div className="progress-bar" style={{ height: 6 }}>
                                 <div className="progress-fill amber" style={{ width: `${progress * 100}%` }} />
                             </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
-                                <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>{Math.round(progress * 100)}% complete</span>
-                                <span style={{ fontSize: 9, color: 'var(--text-muted)' }}>Month {project.totalMonths - project.monthsLeft}/{project.totalMonths}</span>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 6 }}>
+                                <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-numeric)' }}>{Math.round(progress * 100)}%</span>
+                                <span style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-numeric)' }}>{project.totalMonths - project.monthsLeft} / {project.totalMonths} mo</span>
                             </div>
                         </div>
 

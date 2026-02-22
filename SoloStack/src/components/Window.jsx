@@ -1,12 +1,18 @@
-import React, { useRef, useState, useCallback } from 'react';
+import React, { useRef, useState, useCallback, useEffect } from 'react';
 import useGameStore from '../store/gameStore.js';
+import { playSound } from '../utils/soundManager.js';
 
 // ─── Draggable Window Shell ──────────────────────────────────────────────────
 // Wraps content in a draggable OS-style panel.
 
 export default function Window({ windowKey, title, icon, children, defaultPos, width = 420, height }) {
     const closeWindow = useGameStore(s => s.closeWindow);
+    const isMuted = useGameStore(s => s.isMuted);
     const [pos, setPos] = useState(defaultPos || { x: 80, y: 80 });
+
+    useEffect(() => {
+        playSound('pop', isMuted);
+    }, []);
     const [focused, setFocused] = useState(false);
     const dragRef = useRef(null);
 
@@ -32,7 +38,7 @@ export default function Window({ windowKey, title, icon, children, defaultPos, w
 
     return (
         <div
-            className={`window ${focused ? 'focused' : ''}`}
+            className={`window ${focused ? 'focused' : ''} `}
             style={{
                 left: pos.x,
                 top: pos.y,
@@ -49,6 +55,11 @@ export default function Window({ windowKey, title, icon, children, defaultPos, w
                 <button
                     className="window-close-btn"
                     onClick={() => closeWindow(windowKey)}
+                    style={{
+                        background: focused ? 'var(--accent)' : 'var(--bg-glass)',
+                        color: focused ? 'var(--bg-base)' : 'var(--text-muted)',
+                        transition: 'all 0.2s ease'
+                    }}
                     title="Close"
                 >×</button>
             </div>

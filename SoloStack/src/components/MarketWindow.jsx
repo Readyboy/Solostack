@@ -16,13 +16,13 @@ function ProductsList({ products, marketShare, trend }) {
         return [...products].sort((a, b) => { // High to low
             if (sortKey === 'revenue') return b.currentRevenue - a.currentRevenue;
             if (sortKey === 'rating') return b.rating - a.rating;
-            if (sortKey === 'share') return b.marketShare - a.marketShare; // Note: player products don't store share individually, only corps do, but let's assume 0 for sorting mixed lists or update logic
+            if (sortKey === 'share') return b.marketShare - a.marketShare;
             return 0;
         });
     }, [products, sortKey]);
 
     return (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {/* Filters/Sort */}
             <div className="flex gap-2 mb-2">
                 {['revenue', 'rating', 'share'].map(k => (
@@ -30,10 +30,11 @@ function ProductsList({ products, marketShare, trend }) {
                         key={k}
                         onClick={() => setSortKey(k)}
                         style={{
-                            fontSize: 10, padding: '4px 8px', borderRadius: 12, border: 'none',
-                            background: sortKey === k ? 'var(--accent-blue)' : 'var(--bg-glass)',
-                            color: sortKey === k ? 'white' : 'var(--text-muted)',
-                            cursor: 'pointer', fontWeight: 600, textTransform: 'capitalize'
+                            fontSize: 10.5, padding: '4px 10px', borderRadius: 12, border: 'none',
+                            background: sortKey === k ? 'var(--accent)' : 'var(--bg-glass)',
+                            color: sortKey === k ? '#15131a' : 'var(--text-secondary)',
+                            cursor: 'pointer', fontWeight: 600, textTransform: 'capitalize',
+                            transition: 'all 0.2s ease'
                         }}
                     >
                         {k} ▼
@@ -53,8 +54,8 @@ function ProductsList({ products, marketShare, trend }) {
                             key={p.id}
                             className="card"
                             style={{
-                                background: isPlayer ? 'color-mix(in srgb, var(--accent-blue) 8%, var(--bg-glass))' : undefined,
-                                border: isPlayer ? '1px solid var(--accent-blue-dim)' : undefined,
+                                background: isPlayer ? 'color-mix(in srgb, var(--accent) 8%, var(--bg-glass))' : undefined,
+                                border: isPlayer ? '1px solid var(--border-accent)' : undefined,
                                 padding: '8px 10px',
                             }}
                         >
@@ -62,7 +63,7 @@ function ProductsList({ products, marketShare, trend }) {
                                 <div className="flex items-center gap-2">
                                     <div style={{
                                         width: 3, height: 28, borderRadius: 2,
-                                        background: isPlayer ? 'var(--accent-blue)' : (p.color || '#666')
+                                        background: isPlayer ? 'var(--accent)' : (p.color || '#666')
                                     }} />
                                     <div>
                                         <div style={{ fontSize: 12, fontWeight: 700, color: isPlayer ? 'var(--text-primary)' : 'var(--text-secondary)' }}>
@@ -75,12 +76,11 @@ function ProductsList({ products, marketShare, trend }) {
                                 </div>
 
                                 <div style={{ textAlign: 'right', display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}>
-                                    <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent-green)' }}>
-                                        {formatMoney(p.currentRevenue)}<span style={{ fontSize: 9, opacity: 0.7 }}>/mo</span>
+                                    <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--accent-green)', fontFamily: 'var(--font-numeric)' }}>
+                                        {formatMoney(p.currentRevenue)}<span style={{ fontSize: 10, opacity: 0.6, fontWeight: 400 }}> /mo</span>
                                     </div>
-                                    <div style={{ display: 'flex', gap: 6, fontSize: 10, color: 'var(--text-muted)' }}>
-                                        <span>⭐ {p.rating.toFixed(1)}</span>
-                                        {/* Only show share if available (corps) */}
+                                    <div style={{ display: 'flex', gap: 6, fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-numeric)' }}>
+                                        <span style={{ color: 'var(--accent-amber)' }}>⭐ {p.rating.toFixed(1)}</span>
                                         {p.marketShare > 0 && <span>📊 {(p.marketShare * 100).toFixed(1)}%</span>}
                                     </div>
                                 </div>
@@ -89,7 +89,10 @@ function ProductsList({ products, marketShare, trend }) {
                     );
                 })}
                 {sorted.length === 0 && (
-                    <div className="text-center p-4 text-muted text-sm">No active products in the market.</div>
+                    <div className="empty-state">
+                        <div className="empty-icon">🛒</div>
+                        <p>No active products in the market.<br />Launch a product to see it here!</p>
+                    </div>
                 )}
             </div>
         </div>
@@ -127,7 +130,7 @@ function RankingsList({ playerShare, corporations, playerLifetimeRevenue, produc
         revenue: playerMonthlyRev,
         worth: calculateWorth(playerMonthlyRev, playerLifetimeRevenue, playerShare),
         products: products.length,
-        color: 'var(--accent-blue)',
+        color: 'var(--accent)',
         isPlayer: true,
     };
 
@@ -140,29 +143,29 @@ function RankingsList({ playerShare, corporations, playerLifetimeRevenue, produc
                     key={entity.name}
                     className="card"
                     style={{
-                        display: 'flex', alignItems: 'center', gap: 12,
-                        background: entity.isPlayer ? 'color-mix(in srgb, var(--accent-blue) 10%, transparent)' : undefined,
-                        border: entity.isPlayer ? '1px solid var(--accent-blue-dim)' : undefined,
-                        padding: '10px 12px'
+                        display: 'flex', alignItems: 'center', gap: 14,
+                        background: entity.isPlayer ? 'color-mix(in srgb, var(--accent) 12%, transparent)' : undefined,
+                        border: entity.isPlayer ? '1px solid var(--accent)' : undefined,
+                        padding: '12px 14px'
                     }}
                 >
                     <div style={{
-                        fontSize: 14, fontWeight: 800, color: 'var(--text-muted)',
-                        width: 20, textAlign: 'center'
+                        fontSize: 15, fontWeight: 600, color: 'var(--text-muted)',
+                        width: 24, textAlign: 'center', fontFamily: 'var(--font-numeric)'
                     }}>
                         {i + 1}
                     </div>
 
                     <div style={{ flex: 1 }}>
-                        <div style={{ fontSize: 13, fontWeight: 800, color: entity.color }}>{entity.name}</div>
-                        <div style={{ fontSize: 10, color: 'var(--text-muted)' }}>
-                            {entity.products} Active · <span style={{ color: 'var(--accent-green)', fontWeight: 600 }}>Worth: {formatMoney(entity.worth)}</span>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: entity.color }}>{entity.name}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text-secondary)', opacity: 0.8 }}>
+                            {entity.products} Active · <span style={{ color: 'var(--accent-green)', fontWeight: 500, fontFamily: 'var(--font-numeric)' }}>Worth: {formatMoney(entity.worth)}</span>
                         </div>
                     </div>
 
                     <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: 13, fontWeight: 700 }}>{(entity.share * 100).toFixed(1)}%</div>
-                        <div style={{ fontSize: 9, color: 'var(--text-muted)' }}>{formatMoney(entity.revenue)}/mo</div>
+                        <div style={{ fontSize: 14, fontWeight: 600, fontFamily: 'var(--font-numeric)' }}>{(entity.share * 100).toFixed(1)}%</div>
+                        <div style={{ fontSize: 10, color: 'var(--text-muted)', fontFamily: 'var(--font-numeric)' }}>{formatMoney(entity.revenue)}/mo</div>
                     </div>
                 </div>
             ))}
@@ -186,7 +189,7 @@ export default function MarketWindow() {
 
     // Merge products for list
     const allProducts = [
-        ...products.map(p => ({ ...p, isPlayer: true, owner: 'You', marketShare: 0 })),
+        ...products.map(p => ({ ...p, isPlayer: true, owner: 'You', marketShare: p.marketShare || 0 })),
         ...competitorProducts
     ];
 
@@ -197,19 +200,19 @@ export default function MarketWindow() {
             {/* Active Trend Banner */}
             <div style={{
                 padding: '10px 12px', borderRadius: 'var(--radius)',
-                background: `linear-gradient(90deg, ${trend.color}22, transparent)`,
-                border: `1px solid ${trend.color}44`,
+                background: `linear-gradient(90deg, ${trend?.color || '#888'}22, transparent)`,
+                border: `1px solid ${trend?.color || '#888'}44`,
                 marginBottom: 12,
                 flexShrink: 0,
             }}>
-                <div style={{ fontSize: 10, fontWeight: 700, color: trend.color, textTransform: 'uppercase', letterSpacing: 1 }}>
+                <div style={{ fontSize: 10, fontWeight: 700, color: trend?.color || '#888', textTransform: 'uppercase', letterSpacing: 1 }}>
                     Active Trend
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 2 }}>
-                    <div style={{ fontSize: 14, fontWeight: 700 }}>{trend.icon} {trend.name}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700 }}>{trend?.icon || '📈'} {trend?.name || 'Stability'}</div>
                 </div>
                 <div style={{ fontSize: 10, color: 'var(--text-secondary)', marginTop: 4 }}>
-                    Boosts: {Object.entries(trend.categoryBoosts).filter(([_, v]) => v > 1).map(([k]) => k.replace('_', ' ')).join(', ')}
+                    Boosts: {trend ? Object.entries(trend.categoryBoosts).filter(([_, v]) => v > 1).map(([k]) => k.replace('_', ' ')).join(', ') : 'None'}
                 </div>
             </div>
 
@@ -221,7 +224,7 @@ export default function MarketWindow() {
                         flex: 1, padding: '8px', fontSize: 11, fontWeight: 700,
                         background: 'transparent', border: 'none',
                         color: tab === 'products' ? 'var(--text-primary)' : 'var(--text-muted)',
-                        borderBottom: tab === 'products' ? '2px solid var(--accent-blue)' : '2px solid transparent',
+                        borderBottom: tab === 'products' ? '2px solid var(--accent)' : '2px solid transparent',
                         cursor: 'pointer'
                     }}
                 >
@@ -233,7 +236,7 @@ export default function MarketWindow() {
                         flex: 1, padding: '8px', fontSize: 11, fontWeight: 700,
                         background: 'transparent', border: 'none',
                         color: tab === 'rankings' ? 'var(--text-primary)' : 'var(--text-muted)',
-                        borderBottom: tab === 'rankings' ? '2px solid var(--accent-purple)' : '2px solid transparent',
+                        borderBottom: tab === 'rankings' ? '2px solid var(--accent)' : '2px solid transparent',
                         cursor: 'pointer'
                     }}
                 >

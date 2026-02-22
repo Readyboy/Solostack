@@ -12,73 +12,89 @@ const STEPS = ['IDEATION', 'DESIGN', 'DEVELOPMENT', 'MARKETING', 'REVIEW'];
 const STEP_META = {
     IDEATION: {
         pillar: 'Ideation',
-        label: 'Ideation',
+        label: 'Concept',
         icon: '💡',
-        question: 'What are you building?',
-        hint: 'Define your vision. (2 Slots)',
-        accentVar: '--accent-amber',
+        question: 'What are you building tonight?',
+        hint: 'Every hit starts with a single spark.',
+        accentVar: '--accent-warm',
     },
     DESIGN: {
         pillar: 'Design',
-        label: 'Design',
+        label: 'Experience',
         icon: '🎨',
-        question: 'How will it feel?',
-        hint: 'Craft the experience. (3 Slots)',
+        question: 'How will it feel to use?',
+        hint: 'Crafting the soul of your software. (3 Slots)',
         accentVar: '--accent-pink',
     },
     DEVELOPMENT: {
         pillar: 'Development',
-        label: 'Build',
-        icon: '⚙️',
-        question: 'How strong is the tech?',
-        hint: 'Solid foundation vs cutting edge. (3 Slots)',
+        label: 'Engineering',
+        icon: '🛠️',
+        question: 'How solid is the foundation?',
+        hint: 'Balance reliability with innovation. (3 Slots)',
         accentVar: '--accent-blue',
     },
     MARKETING: {
         pillar: 'Marketing',
-        label: 'Market',
+        label: 'Vision',
         icon: '📣',
-        question: 'Will anyone notice?',
-        hint: 'Drive the hype. (2 Slots)',
+        question: 'Who needs to see this?',
+        hint: 'Sharing your work with the world. (2 Slots)',
         accentVar: '--accent-green',
     },
     REVIEW: {
-        label: 'Review',
+        label: 'Finalize',
         icon: '🚀',
         question: 'Ready to ship?',
-        hint: 'Your project summary before development begins.',
-        accentVar: '--accent-purple',
+        hint: 'Your masterpiece is almost ready for the world.',
+        accentVar: '--accent',
     },
 };
 
 function formatMoney(n) {
+    if (n >= 1_000_000_000) return `$${(n / 1_000_000_000).toFixed(1)}B`;
+    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
     if (n >= 1_000) return `$${(n / 1_000).toFixed(1)}K`;
-    return `$${n}`;
+    return `$${Math.round(n)}`;
 }
 
 // ── Component Selectable Card ──────────────────────────────────────────────────
 function ComponentCard({ comp, isSelected, isUnlocked, isExclusiveMatch, capacityFull, onClick, accentVar }) {
     const accent = `var(${accentVar})`;
-    const disabled = !isUnlocked || (!isExclusiveMatch && comp.exclusiveTo);
+    const isGated = !isExclusiveMatch && comp.exclusiveTo;
+    const disabled = !isUnlocked || isGated;
+
     // Allow clicking if already selected (to deselect) even if capacity full
     const clickable = !disabled && (isSelected || !capacityFull);
 
-    const opacity = disabled ? 0.45 : (clickable ? 1 : 0.6);
-    const cursor = clickable ? 'pointer' : 'not-allowed';
+    const opacity = disabled ? 0.6 : (clickable ? 1 : 0.7);
+    const cursor = clickable ? 'pointer' : (disabled ? 'help' : 'not-allowed');
+    const filter = !isUnlocked ? 'grayscale(0.8) blur(0.4px)' : undefined;
 
     return (
         <div
             className="card"
+            title={!isUnlocked ? `Requires $${comp.unlockThreshold.toLocaleString()} Lifetime Revenue` : undefined}
             onClick={() => clickable && onClick(comp.id)}
             style={{
-                cursor, opacity,
+                cursor, opacity, filter,
                 border: isSelected ? `1px solid ${accent}` : undefined,
                 background: isSelected ? `color-mix(in srgb, ${accent} 12%, transparent)` : undefined,
-                transition: 'all 0.1s ease',
+                transition: 'all 0.15s ease',
                 userSelect: 'none',
                 position: 'relative',
+                overflow: 'hidden'
             }}
         >
+            {!isUnlocked && (
+                <div style={{
+                    position: 'absolute', top: 4, right: 6,
+                    fontSize: 10, fontWeight: 700, color: 'var(--text-muted)',
+                    display: 'flex', alignItems: 'center', gap: 3
+                }}>
+                    🔒 {formatMoney(comp.unlockThreshold)}
+                </div>
+            )}
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
                 {/* Checkbox indicator */}
                 <div style={{
@@ -101,17 +117,6 @@ function ComponentCard({ comp, isSelected, isUnlocked, isExclusiveMatch, capacit
                             {!isExclusiveMatch && comp.exclusiveTo && (
                                 <span className="tag" style={{ fontSize: 9, background: 'var(--bg-glass)', color: 'var(--text-muted)' }}>
                                     Only for {comp.exclusiveTo.replace('_', ' ')}
-                                </span>
-                            )}
-                            {!isUnlocked && (
-                                <span className="tag" style={{ fontSize: 9 }}>
-                                    {comp.unlockCondition.type === 'mastery'
-                                        ? `🔒 ${comp.unlockCondition.releases} releases`
-                                        : comp.unlockCondition.type === 'fanbase'
-                                            ? `🔒 ${(comp.unlockCondition.amount / 1000)}k fans`
-                                            : comp.unlockCondition.type === 'trend'
-                                                ? `🔒 Trend: ${comp.unlockCondition.trendId}`
-                                                : `🔒 ${formatMoney(comp.unlockCondition.amount)}`}
                                 </span>
                             )}
                             {comp.capacityCost > 1 && (
@@ -137,11 +142,11 @@ function ComponentCard({ comp, isSelected, isUnlocked, isExclusiveMatch, capacit
                     </div>
 
                     <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
-                        <span style={{ fontSize: 10, color: 'var(--accent-green)', fontWeight: 600 }}>
-                            ${comp.cost.toLocaleString()}
+                        <span style={{ fontSize: 11, color: isUnlocked ? 'var(--accent-green)' : 'var(--text-muted)', fontWeight: 600, fontFamily: 'var(--font-numeric)' }}>
+                            {formatMoney(comp.cost)}
                         </span>
                         {comp.devTime > 0 && (
-                            <span style={{ fontSize: 10, color: 'var(--text-muted)' }}>+{comp.devTime}mo</span>
+                            <span style={{ fontSize: 11, color: 'var(--text-muted)', fontFamily: 'var(--font-numeric)' }}>{comp.devTime}mo</span>
                         )}
                     </div>
                 </div>
@@ -153,9 +158,10 @@ function ComponentCard({ comp, isSelected, isUnlocked, isExclusiveMatch, capacit
 function StatPill({ label, val, color }) {
     return (
         <span style={{
-            fontSize: 9, fontWeight: 700, padding: '2px 6px', borderRadius: 20,
-            background: `color-mix(in srgb, ${color} 15%, transparent)`,
-            color, border: `1px solid color-mix(in srgb, ${color} 30%, transparent)`,
+            fontSize: 9.5, fontWeight: 500, padding: '2px 8px', borderRadius: 20,
+            background: `color-mix(in srgb, ${color} 12%, transparent)`,
+            color, border: `1px solid color-mix(in srgb, ${color} 25%, transparent)`,
+            fontFamily: 'var(--font-numeric)'
         }}>
             {label} {val}
         </span>
@@ -182,13 +188,13 @@ function StepTabs({ currentStep, completedSteps, onStepClick }) {
                         onClick={() => isClickable && onStepClick(step)}
                         disabled={!isClickable}
                         style={{
-                            flex: 1, padding: '10px 4px', border: 'none',
+                            flex: 1, padding: '12px 4px', border: 'none',
                             background: 'transparent',
-                            borderBottom: isCurrent ? `2px solid ${accent}` : '2px solid transparent',
-                            color: isCurrent ? accent : isDone ? 'var(--text-secondary)' : 'var(--text-muted)',
+                            borderBottom: isCurrent ? `2px solid var(--accent)` : '2px solid transparent',
+                            color: isCurrent ? 'var(--accent)' : isDone ? 'var(--text-secondary)' : 'var(--text-muted)',
                             cursor: isClickable ? 'pointer' : 'not-allowed',
-                            fontFamily: 'var(--font)', fontSize: 10, fontWeight: 600,
-                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+                            fontFamily: 'var(--font-ui)', fontSize: 11, fontWeight: 500,
+                            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
                             transition: 'all 0.15s ease',
                             opacity: isClickable ? 1 : 0.4,
                             marginBottom: -1,
@@ -213,6 +219,7 @@ export default function BuilderWindow() {
     const products = useGameStore(s => s.products);
     const trend = useGameStore(s => s.trend.data);
     const pillarSlots = useGameStore(s => s.pillarSlots);
+    const lifetimeRevenue = useGameStore(s => s.lifetimeRevenue);
     const pendingSlotChoice = useGameStore(s => s.pendingSlotChoice);
     const chooseSlotBonus = useGameStore(s => s.chooseSlotBonus);
 
@@ -285,7 +292,7 @@ export default function BuilderWindow() {
     const softType = getSoftwareTypeById(softwareTypeId);
 
     const goNext = () => {
-        if (step === 'IDEATION' && !softwareTypeId) { setError('Select a software type first!'); return; }
+        if (step === 'IDEATION' && !softwareTypeId) { setError('Select a vision first! 🌙'); return; }
 
         if (step !== 'REVIEW') {
             const idx = STEPS.indexOf(step);
@@ -295,18 +302,18 @@ export default function BuilderWindow() {
     };
 
     const handleLaunch = () => {
-        if (!projectName.trim()) { setError('Name your project!'); return; }
-        if (!softwareTypeId) { setError('Select a software type!'); return; }
+        if (!projectName.trim()) { setError('Give your creation a name! ✍️'); return; }
+        if (!softwareTypeId) { setError('What kind of magic is this? 🪄'); return; }
 
         const type = getSoftwareTypeById(softwareTypeId);
         if (allSelectedIds.length < (type.minimumComponents || 1)) {
-            setError(`This type requires at least ${type.minimumComponents} components!`);
+            setError(`This dream needs a few more pieces to work... (min ${type.minimumComponents})`);
             return;
         }
 
-        if (money < totalCost) { setError('Not enough money!'); return; }
+        if (money < totalCost) { setError("Looks like the budget is a bit tight... 💸"); return; }
         if (energyLeft < type.energyCost) {
-            setError(`Need ${type.energyCost} energy! Archive products to free energy.`); return;
+            setError(`Low on focus... maybe archive some old projects? 🔋`); return;
         }
 
         const result = startProject({ name: projectName.trim(), softwareTypeId, componentIds: allSelectedIds });
@@ -373,8 +380,8 @@ export default function BuilderWindow() {
                             <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>
                                 Capacity
                             </div>
-                            <div style={{ fontSize: 14, fontWeight: 800, color: capacityFull ? 'var(--accent-pink)' : accent }}>
-                                {currentCapacity} <span style={{ color: 'var(--text-muted)', fontSize: 11 }}>/ {maxCapacity}</span>
+                            <div style={{ fontSize: 15, fontWeight: 600, color: capacityFull ? 'var(--accent-pink)' : accent, fontFamily: 'var(--font-numeric)' }}>
+                                {currentCapacity} <span style={{ color: 'var(--text-muted)', fontSize: 12, fontWeight: 400 }}>/ {maxCapacity}</span>
                             </div>
                         </div>
                     )}
@@ -449,10 +456,7 @@ export default function BuilderWindow() {
                                 key={comp.id}
                                 comp={comp}
                                 isSelected={selections[pillarKey].includes(comp.id)}
-                                isUnlocked={
-                                    unlockedComponents.includes(comp.id) ||
-                                    (comp.unlockCondition.type === 'trend' && trend.id === comp.unlockCondition.trendId)
-                                }
+                                isUnlocked={lifetimeRevenue >= (comp.unlockThreshold || 0)}
                                 isExclusiveMatch={!comp.exclusiveTo || comp.exclusiveTo === softwareTypeId}
                                 capacityFull={currentCapacity + (comp.capacityCost || 1) > maxCapacity}
                                 onClick={(id) => toggleComponent(pillarKey, id)}
@@ -478,7 +482,7 @@ export default function BuilderWindow() {
                             onClick={goNext}
                             disabled={step === 'IDEATION' && !softwareTypeId}
                         >
-                            {step === 'MARKETING' ? 'Review & Plan' : `Next: ${STEP_META[STEPS[STEPS.indexOf(step) + 1]]?.label} →`}
+                            {step === 'MARKETING' ? 'Almost ready... ✨' : `Looks good, next step →`}
                         </button>
                     </div>
                 </div>
@@ -540,9 +544,9 @@ export default function BuilderWindow() {
                                 { label: 'Energy', value: `⚡${softType?.energyCost ?? '—'}`, icon: '⚡', color: softType && energyLeft < softType.energyCost ? 'var(--accent-pink)' : undefined },
                                 { label: 'Total Comps', value: `${allSelectedIds.length} / ${softType?.minimumComponents || 1}+`, icon: '🧩', color: (allSelectedIds.length < (softType?.minimumComponents || 1)) ? 'var(--accent-pink)' : undefined },
                             ].map(({ label, value, icon, color }) => (
-                                <div key={label} style={{ padding: '7px 10px', background: 'var(--bg-glass)', borderRadius: 'var(--radius-sm)' }}>
-                                    <div style={{ fontSize: 9, color: 'var(--text-muted)', fontWeight: 600 }}>{label}</div>
-                                    <div style={{ fontSize: 12, fontWeight: 800, color: color || 'var(--text-primary)', marginTop: 2 }}>{value}</div>
+                                <div key={label} style={{ padding: '8px 10px', background: 'var(--bg-glass)', borderRadius: 'var(--radius-sm)' }}>
+                                    <div style={{ fontSize: 10, color: 'var(--text-muted)', fontWeight: 500 }}>{label}</div>
+                                    <div style={{ fontSize: 13, fontWeight: 600, color: color || 'var(--text-primary)', marginTop: 2, fontFamily: 'var(--font-numeric)' }}>{value}</div>
                                 </div>
                             ))}
                         </div>
@@ -555,13 +559,13 @@ export default function BuilderWindow() {
                     )}
 
                     <div style={{ display: 'flex', gap: 8 }}>
-                        <button className="btn btn-sm" onClick={() => setStep('MARKETING')}>← Edit</button>
+                        <button className="btn btn-sm" onClick={() => setStep('MARKETING')}>← Tweak</button>
                         <button
                             className="btn btn-success w-full"
                             onClick={handleLaunch}
                             disabled={money < totalCost || (softType && allSelectedIds.length < softType.minimumComponents)}
                         >
-                            🚀 Begin Build
+                            🌙 Start Development
                         </button>
                     </div>
                 </div>

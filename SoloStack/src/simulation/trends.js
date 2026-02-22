@@ -9,7 +9,7 @@ export const TRENDS = [
         color: '#7c6ef7',
         duration: { min: 5, max: 8 },
         description: 'AI-powered features are everywhere. Players want magic.',
-        categoryBoosts: { saas_tool: 1.5, productivity: 1.2 },
+        categoryBoosts: { hustle_saas: 1.5, dev_playground: 1.4, everyday_app: 1.2 },
         tagBoosts: { ai: 1.8, innovation: 1.3, emerging: 1.5 },
         tagPenalties: {},
         categoryPenalties: {},
@@ -21,10 +21,10 @@ export const TRENDS = [
         color: '#f59e0b',
         duration: { min: 4, max: 7 },
         description: 'Everyone wants mobile. Games and apps are booming.',
-        categoryBoosts: { mobile_game: 1.6, browser_ext: 1.2 },
+        categoryBoosts: { indie_hit: 1.6, everyday_app: 1.3, system_toy: 1.2 },
         tagBoosts: { social: 1.4, hype: 1.3, viral: 1.2 },
         tagPenalties: { trust: 0.9 },
-        categoryPenalties: { saas_tool: 0.85 },
+        categoryPenalties: { hustle_saas: 0.85 },
     },
     {
         id: 'privacy_push',
@@ -33,10 +33,10 @@ export const TRENDS = [
         color: '#3ecf8e',
         duration: { min: 4, max: 6 },
         description: 'Users demand privacy. Security-first wins.',
-        categoryBoosts: { saas_tool: 1.3, browser_ext: 1.4 },
+        categoryBoosts: { hustle_saas: 1.3, system_toy: 1.5, power_tool: 1.2 },
         tagBoosts: { privacy: 1.6, security: 1.5, trust: 1.4 },
         tagPenalties: { hype: 0.8, social: 0.85 },
-        categoryPenalties: { mobile_game: 0.9 },
+        categoryPenalties: { indie_hit: 0.9 },
     },
     {
         id: 'minimalism',
@@ -45,7 +45,7 @@ export const TRENDS = [
         color: '#94a3b8',
         duration: { min: 5, max: 7 },
         description: 'Less is more. Clutter-free, focused products win.',
-        categoryBoosts: { productivity: 1.4, browser_ext: 1.5 },
+        categoryBoosts: { everyday_app: 1.4, system_toy: 1.5, power_tool: 1.3 },
         tagBoosts: { minimalism: 1.6, design: 1.3, retention: 1.2 },
         tagPenalties: { hype: 0.85, social: 0.9 },
         categoryPenalties: {},
@@ -57,10 +57,10 @@ export const TRENDS = [
         color: '#f43f5e',
         duration: { min: 4, max: 6 },
         description: 'Gaming culture peaks. Gamified apps ride the wave.',
-        categoryBoosts: { mobile_game: 1.7, browser_ext: 1.1 },
+        categoryBoosts: { indie_hit: 1.7, system_toy: 1.2 },
         tagBoosts: { viral: 1.5, hype: 1.4, social: 1.3 },
         tagPenalties: { data: 0.85, strategy: 0.9 },
-        categoryPenalties: { saas_tool: 0.8 },
+        categoryPenalties: { hustle_saas: 0.8 },
     },
     {
         id: 'cloud_shift',
@@ -69,10 +69,10 @@ export const TRENDS = [
         color: '#38bdf8',
         duration: { min: 5, max: 8 },
         description: 'Everything moves to the cloud. SaaS is king.',
-        categoryBoosts: { saas_tool: 1.6, productivity: 1.3 },
+        categoryBoosts: { hustle_saas: 1.6, everyday_app: 1.3, dev_playground: 1.4 },
         tagBoosts: { tech: 1.4, stable: 1.3, data: 1.5 },
         tagPenalties: { viral: 0.9 },
-        categoryPenalties: { mobile_game: 0.85 },
+        categoryPenalties: { indie_hit: 0.85 },
     },
 ];
 
@@ -91,8 +91,12 @@ export function getTrendAlignment(componentTags, softwareTypeId, trend) {
     let score = 1.0;
 
     // Category boost/penalty
-    if (trend.categoryBoosts[softwareTypeId]) score *= trend.categoryBoosts[softwareTypeId];
-    if (trend.categoryPenalties[softwareTypeId]) score *= trend.categoryPenalties[softwareTypeId];
+    if (trend && trend.categoryBoosts && trend.categoryBoosts[softwareTypeId]) {
+        score *= trend.categoryBoosts[softwareTypeId];
+    }
+    if (trend && trend.categoryPenalties && trend.categoryPenalties[softwareTypeId]) {
+        score *= trend.categoryPenalties[softwareTypeId];
+    }
 
     // Tag alignment
     const allTags = componentTags.flat();

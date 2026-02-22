@@ -36,6 +36,6 @@ export const PLAYER_SHARE_GAIN = 0.02;   // share gained per product release
 export const PRODUCT_PASSIVE_ENERGY = 2;  // energy per active product
 
 // Win conditions
-export const WIN_REVENUE = 500_000;        // lifetime revenue to win
+export const WIN_REVENUE = 500_000_000;      // 500 million lifetime revenue to win
 export const WIN_MARKET_SHARE = 0.45;      // 45% overall market share
 export const WIN_CATEGORY_DOMINATION = 3;  // dominate 3 categories
